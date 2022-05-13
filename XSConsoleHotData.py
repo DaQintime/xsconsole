@@ -15,7 +15,7 @@
 
 import XenAPI
 
-import commands, re, shutil, sys, socket
+import re, shutil, sys, socket
 from pprint import pprint
 
 from XSConsoleAuth import *
@@ -196,7 +196,7 @@ class HotData:
                             raise Exception("List index "+str(currentRef)+" out of range in '"+'.'.join(inNames)+"'")
                         itemRef = itemRef[currentRef]
             return itemRef
-        except Exception, e:
+        except Exception as e:
             # Data not present/fetchable, so return the default value
             return FirstValue(inDefault, None)                
         
@@ -485,5 +485,5 @@ class HotData:
         return self.session
         
     def Dump(self):
-        print "Contents of HotData cache:"
+        print("Contents of HotData cache:")
         pprint(self.data)

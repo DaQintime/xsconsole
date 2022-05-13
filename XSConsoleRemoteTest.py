@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os, socket, xmlrpclib
+import os, socket, xmlrpc
 
 from XSConsoleBases import *
 from XSConsoleImporter import *
@@ -21,15 +21,15 @@ from XSConsoleLang import *
 from XSConsoleLog import *
 from XSConsoleLayout import *
 
-import SocketServer
-import SimpleXMLRPCServer
+import socketserver
+from xmlrpc import server
 
-class UnixSimpleXMLRPCRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
+class UnixSimpleXMLRPCRequestHandler(server.SimpleXMLRPCRequestHandler):
     # Python 2.7's SimpleXMLRPCRequestHandler enables Nagle's algorithm by default
     # which fails because we're working with Unix domain sockets so disable it.
     disable_nagle_algorithm = False
 
-class UDSXMLRPCServer(SocketServer.UnixStreamServer, SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
+class UDSXMLRPCServer(socketserver.UnixStreamServer, server.SimpleXMLRPCDispatcher):
     def __init__(self, inAddr, inRequestHandler = None):
         self.logRequests = False
         SimpleXMLRPCServer.SimpleXMLRPCDispatcher.__init__(self)
@@ -108,7 +108,7 @@ class XMLRPCRemoteTest:
             for i, pane in enumerate(snapshot):
                 for line in pane:
                     retVal += 'Pane '+str(i) + ':' + line + '\n'
-        except Exception, e:
+        except Exception as e:
             retVal += 'Failed: '+Lang(e)
         if len(self.errors) > 0:
             retVal += "\n\nExceptions process by Lang()\n\n" + "\n".join(self.errors)
@@ -121,14 +121,14 @@ class XMLRPCRemoteTest:
     def WrapProcedure(self, inProc): # Any return value of inProc is discarded
         try:
             inProc()
-        except Exception, e:
+        except Exception as e:
             raise xmlrpclib.Fault(1, self.ErrorString(e))
         return None
 
     def WrapFunction(self, inFunc): # inFunc returns a value
         try:
             retVal = inFunc()
-        except Exception, e:
+        except Exception as e:
             raise xmlrpclib.Fault(1, self.ErrorString(e))
         return retVal
 

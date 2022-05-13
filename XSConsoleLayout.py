@@ -35,7 +35,7 @@ class Layout:
 
     def AssertScreenSize(self):
         consoleXSize = self.parent.XSize()
-        consoleYSize = self.parent.YSize()
+        consoleYSize = self.parent.YSize() + 1
         if consoleXSize < self.APP_XSIZE or consoleYSize < self.APP_YSIZE:
             raise Exception('Console size ('+str(consoleXSize)+', '+str(consoleYSize) +
                 ') too small for application size ('+str(self.APP_XSIZE)+', '+str(self.APP_YSIZE) +')')

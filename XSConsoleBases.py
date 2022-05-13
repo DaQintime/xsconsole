@@ -22,8 +22,8 @@ from pprint import pprint
 def ParamsToAttr():
         d = inspect.currentframe().f_back.f_locals
         obj = d.pop("self")
-        for name, value in d.iteritems():
-            setattr(obj, name,value)
+        for name, value in d.items():
+            setattr(obj, name, value)
 
 def FirstValue(*inArgs):
     for arg in inArgs:

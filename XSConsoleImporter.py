@@ -47,7 +47,7 @@ class Importer:
                                 # Import using variable as module name
                                 (fileObj, pathName, description) = imp.find_module(importName, [root])
                                 imp.load_module(importName, fileObj, pathName, description)
-                            except Exception, e:
+                            except Exception as e:
                                 try: XSLogError(*traceback.format_tb(sys.exc_info()[2]))
                                 except: pass
                                 try: XSLogError("*** PlugIn '"+importName+"' failed to load: "+str(e))
@@ -118,7 +118,7 @@ class Importer:
                        x.get('readyhandlerpriority', 1000))
 
         plugins = cls.plugIns.values()
-        plugins.sort(CmpPlugin)
+        # plugins.sort(CmpPlugin)
 
         for plugin in plugins:
             handler = plugin.get('readyhandler', None)
@@ -147,7 +147,7 @@ class Importer:
     def BuildRootMenu(cls, inParent):
         retVal = RootMenu(inParent)
         
-        for name, entries in cls.menuEntries.iteritems():
+        for name, entries in cls.menuEntries.items():
             for entry in entries:
                 # Create the menu that this item is in
                 retVal.CreateMenuIfNotPresent(name)
@@ -178,10 +178,10 @@ class Importer:
 
     @classmethod
     def Dump(cls):
-        print "Contents of PlugIn registry:"
+        print("Contents of PlugIn registry:")
         pprint(cls.plugIns)
-        print "\nRegistered menu entries:"
+        print("\nRegistered menu entries:")
         pprint(cls.menuEntries)
-        print "\nRegistered resources:"
+        print("\nRegistered resources:")
         pprint(cls.resources)
     

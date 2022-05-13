@@ -82,6 +82,9 @@ class Menu:
         # Also need to call HandleEnter
         
     def CurrentChoiceDef(self):
+        if len(self.choiceDefs) == 0:
+            return ChoiceDef(self)
+
         if self.choiceIndex >= len(self.choiceDefs):
             self.choiceIndex = max(0, len(self.choiceDefs) - 1)
         return self.choiceDefs[self.choiceIndex]

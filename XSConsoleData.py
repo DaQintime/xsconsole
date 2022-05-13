@@ -15,7 +15,7 @@
 
 import XenAPI
 
-import commands, re, shutil, sys, tempfile, socket, os
+import subprocess, re, shutil, sys, tempfile, socket, os
 from pprint import pprint
 from simpleconfig import SimpleConfigFile
 
@@ -98,31 +98,31 @@ class Data:
         self.ReadTimezones()
         self.ReadKeymaps()
         
-        (status, output) = commands.getstatusoutput("dmidecode")
+        (status, output) = subprocess.getstatusoutput("dmidecode")
         if status != 0:
             # Use test dmidecode file if there's no real output
-            (status, output) = commands.getstatusoutput("/bin/cat ./dmidecode.txt")
+            (status, output) = subprocess.getstatusoutput("/bin/cat ./dmidecode.txt")
         
         if status == 0:
             self.ScanDmiDecode(output.split("\n"))
      
-        (status, output) = commands.getstatusoutput("/sbin/lspci -m")
+        (status, output) = subprocess.getstatusoutput("/sbin/lspci -m")
         if status != 0:
-            (status, output) = commands.getstatusoutput("/usr/bin/lspci -m")
+            (status, output) = subprocess.getstatusoutput("/usr/bin/lspci -m")
 
         if status == 0:
             self.ScanLspci(output.split("\n"))
      
         if os.path.isfile("/usr/bin/ipmitool"):
-            (status, output) = commands.getstatusoutput("/usr/bin/ipmitool mc info")
+            (status, output) = subprocess.getstatusoutput("/usr/bin/ipmitool mc info")
             if status == 0:
                 self.ScanIpmiMcInfo(output.split("\n"))
         
-        (status, output) = commands.getstatusoutput("/bin/cat /etc/xensource-inventory")
+        (status, output) = subprocess.getstatusoutput("/bin/cat /etc/xensource-inventory")
         if status == 0:
             self.ScanInventory(output.split("\n"))
 
-        (status, output) = commands.getstatusoutput("/usr/bin/openssl x509 -in %s/xapi-ssl.pem -fingerprint -noout" % (Config.Inst().XCPConfigDir()))
+        (status, output) = subprocess.getstatusoutput("/usr/bin/openssl x509 -in %s/xapi-ssl.pem -fingerprint -noout" % (Config.Inst().XCPConfigDir()))
         if status == 0:
             fp = output.split("=")
             if len(fp) >= 2:
@@ -164,7 +164,7 @@ class Data:
             try:
                 try:
                     thisHost = self.session.xenapi.session.get_this_host(self.session._session)
-                except XenAPI.Failure, e:
+                except XenAPI.Failure as e:
                     XSLog('Data update connection failed - retrying.  Exception was:', e)
                     self.session = Auth.Inst().CloseSession(self.session)
                     self.RequireSession()
@@ -203,7 +203,7 @@ class Data:
                     
                     try:
                         retVal['network'] = self.session.xenapi.network.get_record(retVal['network'])
-                    except XenAPI.Failure, e:
+                    except XenAPI.Failure as e:
                         XSLogError('Missing network record: ', e)
                         
                     retVal['opaqueref'] = inPIF
@@ -306,7 +306,7 @@ class Data:
 
             except socket.timeout:
                 self.session = None
-            except Exception, e:
+            except Exception as e:
                 XSLogError('Data update failed: ', e)
 
             try:
@@ -326,7 +326,7 @@ class Data:
                             
                     self.data['sr'].append(values)
                     
-            except Exception, e:
+            except Exception as e:
                 XSLogError('SR data update failed: ', e)
 
         self.UpdateFromResolveConf()
@@ -344,8 +344,8 @@ class Data:
     def DeriveData(self):
         self.data.update({
             'derived' : {
-                'app_name' : Lang(self.data['inventory']['BRAND_CONSOLE']),
-                'full_app_name' : Lang(self.data['inventory']['COMPANY_NAME_SHORT'] + " " + self.data['inventory']['BRAND_CONSOLE']),
+                'app_name' : Lang(self.data['inventory']['BRAND_CONSOLE']) if "inventory" in self.data.keys() else "",
+                'full_app_name' : Lang(self.data['inventory']['COMPANY_NAME_SHORT'] + " " + self.data['inventory']['BRAND_CONSOLE']) if "inventory" in self.data.keys() else "",
                 'cpu_name_summary' : {}
             }
         })
@@ -378,6 +378,7 @@ class Data:
      
         # Calculate the full version string
         version = self.host.software_version.product_version(self.host.software_version.platform_version())
+        version = str(version)
         version += '-' + self.host.software_version.build_number('')
 
         oemBuildNumber = self.host.software_version.oem_build_number('')
@@ -426,17 +427,17 @@ class Data:
         self.session.xenapi.host.syslog_reconfigure(self.host.opaqueref())
     
     def UpdateFromResolveConf(self):
-        (status, output) = commands.getstatusoutput("/bin/cat /etc/resolv.conf")
+        (status, output) = subprocess.getstatusoutput("/bin/cat /etc/resolv.conf")
         if status == 0:
             self.ScanResolvConf(output.split("\n"))
     
     def UpdateFromSysconfig(self):
-        (status, output) = commands.getstatusoutput("/bin/cat /etc/sysconfig/network")
+        (status, output) = subprocess.getstatusoutput("/bin/cat /etc/sysconfig/network")
         if status == 0:
             self.ScanSysconfigNetwork(output.split("\n"))
     
     def UpdateFromNTPConf(self):
-        (status, output) = commands.getstatusoutput("/bin/cat /etc/ntp.conf")
+        (status, output) = subprocess.getstatusoutput("/bin/cat /etc/ntp.conf")
         if status == 0:
             self.ScanNTPConf(output.split("\n"))
             
@@ -444,7 +445,7 @@ class Data:
         return inString.lower().startswith('true')
 
     def RootLabel(self):
-        output = commands.getoutput('/bin/cat /proc/cmdline')
+        output = subprocess.getoutput('/bin/cat /proc/cmdline')
         match = re.search(r'root=\s*LABEL\s*=\s*(\S+)', output)
         if match:
             retVal = match.group(1)
@@ -575,7 +576,7 @@ class Data:
     def MultipleMatch(self, inLine, inRegExp, inKey):
         match = re.match(inRegExp, inLine)
         if match:
-            if not self.data['dmi'].has_key(inKey):
+            if not inKey in self.data['dmi'].keys():
                 self.data['dmi'][inKey] = []
             self.data['dmi'][inKey].append(match.group(1))
 
@@ -627,7 +628,7 @@ class Data:
                 self.data['bmc']['version'] = match.group(1)
     
     def ScanService(self, service):
-        (status, output) = commands.getstatusoutput("systemctl is-enabled %s" % (service,))
+        (status, output) = subprocess.getstatusoutput("systemctl is-enabled %s" % (service,))
         self.data['chkconfig'][service] = status == 0
 
     def ScanResolvConf(self, inLines):
@@ -728,7 +729,7 @@ class Data:
             cfg.write('/etc/sysconfig/clock')
 
     def CurrentTimeString(self):
-        return commands.getoutput('/bin/date -R')
+        return subprocess.getoutput('/bin/date -R')
 
     def ReadKeymaps(self):
         self.data['keyboard'] = {
@@ -760,7 +761,7 @@ class Data:
         
         keymapParam = ShellUtils.MakeSafeParam(inKeymap)
         # Load the keymap now
-        status, output = commands.getstatusoutput('/bin/loadkeys "'+keymapParam+'"')
+        status, output = subprocess.getstatusoutput('/bin/loadkeys "'+keymapParam+'"')
         if status != 0:
             raise Exception(output)
         
@@ -776,7 +777,7 @@ class Data:
     def KeymapToName(self, inKeymap):
         # Derive a name to present to the user
         mapName = FirstValue(inKeymap, Lang('<Default>'))
-        for key, value in self.keyboard.namestomaps({}).iteritems():
+        for key, value in self.keyboard.namestomaps({}).items():
             if value == inKeymap:
                 mapName = key
         
@@ -863,7 +864,7 @@ class Data:
             self.RequireSession()
             self.session.xenapi.PIF.reconfigure_ip(inPIF['opaqueref'],  inMode,  inIP,  inNetmask,  inGateway, FirstValue(inDNS, ''))
             self.session.xenapi.host.management_reconfigure(inPIF['opaqueref'])
-            status, output = commands.getstatusoutput('%s host-signal-networking-change' % (Config.Inst().XECLIPath()))
+            status, output = subprocess.getstatusoutput('%s host-signal-networking-change' % (Config.Inst().XECLIPath()))
             if status != 0:
                 raise Exception(output)
         finally:
@@ -932,7 +933,7 @@ class Data:
                 ifRE = re.compile(r'\s*inet\s+' + ipre + '\s+netmask\s+(' + ipre + r')\s+broadcast\s+(' + ipre + r')\s*$',
                     re.IGNORECASE)
 
-                ifconfig = commands.getoutput("/sbin/ifconfig '"+device+"'").split("\n")
+                ifconfig = subprocess.getoutput("/sbin/ifconfig '"+device+"'").split("\n")
                 for line in ifconfig:
                     match = ifRE.match(line)
                     if match:
@@ -958,7 +959,7 @@ class Data:
                 routeRE = re.compile(r'([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+UG\s+\d+\s+\d+\s+\d+\s+'+device,
                     re.IGNORECASE)
     
-                routes = commands.getoutput("/sbin/route -n").split("\n")
+                routes = subprocess.getoutput("/sbin/route -n").split("\n")
                 for line in routes:
                     match = routeRE.match(line)
                     if match:
@@ -1031,7 +1032,7 @@ class Data:
                 if vbd['currently_attached']:
                     self.UnplugVBD(vbd)
                 self.DestroyVBD(vbd)
-            except Exception, e:
+            except Exception as e:
                 XSLogError('VBD purge failed', e)
     
     def IsXAPIRunning(self):
@@ -1075,32 +1076,32 @@ class Data:
             State.Inst().SaveIfRequired()
     
     def EnableService(self, service):
-        status, output = commands.getstatusoutput("systemctl enable %s" % (service,))
+        status, output = subprocess.getstatusoutput("systemctl enable %s" % (service,))
         if status != 0:
             raise Exception(output)
 
     def DisableService(self, service):
-        status, output = commands.getstatusoutput("systemctl disable %s" % (service,))
+        status, output = subprocess.getstatusoutput("systemctl disable %s" % (service,))
         if status != 0:
             raise Exception(output)
 
     def RestartService(self, service):
-        status, output = commands.getstatusoutput("systemctl restart %s" % (service,))
+        status, output = subprocess.getstatusoutput("systemctl restart %s" % (service,))
         if status != 0:
             raise Exception(output)
 
     def StartService(self, service):
-        status, output = commands.getstatusoutput("systemctl start %s" % (service,))
+        status, output = subprocess.getstatusoutput("systemctl start %s" % (service,))
         if status != 0:
             raise Exception(output)
 
     def StopService(self, service):
-        status, output = commands.getstatusoutput("systemctl stop %s" % (service,))
+        status, output = subprocess.getstatusoutput("systemctl stop %s" % (service,))
         if status != 0:
             raise Exception(output)
 
     def NTPStatus(self):
-        status, output = commands.getstatusoutput("/usr/bin/ntpstat")
+        status, output = subprocess.getstatusoutput("/usr/bin/ntpstat")
         return output
             
     def SetVerboseBoot(self, inVerbose):
@@ -1109,7 +1110,7 @@ class Data:
         else:
             name = 'quiet'
 
-        status, output = commands.getstatusoutput(
+        status, output = subprocess.getstatusoutput(
             "(export TERM=xterm && /opt/xensource/libexec/set-boot " + name + ")")
         if status != 0:
             raise Exception(output)

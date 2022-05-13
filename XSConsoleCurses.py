@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import curses, sys, commands
+import curses, sys
 
 from XSConsoleBases import *
 from XSConsoleConfig import *
@@ -157,7 +157,7 @@ class CursesPane:
         self.title = inTitle
         
     def ClippedAddStr(self,  inString, inX,  inY,  inColour): # Internal use
-        xPos = inX
+        xPos = int(inX)
         clippedStr = inString
         
         # Is text on the screen at all?
@@ -169,18 +169,18 @@ class CursesPane:
                 xPos = 0
 
             # Clip against right hand side
-            clippedStr = clippedStr[:self.xSize - xPos]
+            clippedStr = clippedStr[:self.xSize - (xPos)]
             
             if len(clippedStr) > 0:
                 try:
                     encodedStr = clippedStr
-                    if isinstance(clippedStr, unicode):
+                    if isinstance(clippedStr, str):
                         encodedStr = clippedStr.encode('utf-8')
                         # Clear field here since addstr will clear len(encodedStr)-len(clippedStr) too few spaces
                         self.win.addstr(inY, xPos, len(clippedStr)*' ', CursesPalette.ColourAttr(FirstValue(inColour, self.defaultColour)))
                         self.win.refresh()
                     self.win.addstr(inY, xPos, encodedStr, CursesPalette.ColourAttr(FirstValue(inColour, self.defaultColour)))
-                except Exception,  e:
+                except Exception as e:
                     if xPos + len(inString) == self.xSize and inY + 1 == self.ySize:
                         # Curses incorrectly raises an exception when writing the bottom right
                         # character in a window, but still completes the write, so ignore it
@@ -289,9 +289,8 @@ class CursesPane:
 class CursesWindow(CursesPane):
     def __init__(self, inXPos, inYPos, inXSize, inYSize, inParent):
         CursesPane.__init__(self, inXPos, inYPos, inXSize, inYSize, inParent.xOffset, inParent.yOffset)
-
         if inParent:
-            self.win = inParent.Win().subwin(self.ySize, self.xSize, self.yPos+inParent.YOffset(), self.xPos+inParent.XOffset())
+            self.win = inParent.Win().subwin(int(self.ySize), int(self.xSize), int(self.yPos+inParent.YOffset()), int(self.xPos+inParent.XOffset()))
         else:
             raise Exception("Orphan windows not supported - supply parent")
             self.win = curses.newwin(self.ySize, self.xSize, self.yPos, self.xPos) # Old behaviour
@@ -316,7 +315,7 @@ class CursesScreen(CursesPane):
         curses.start_color()
         CursesPalette.DefineColours()
         try:
-            curses.curs_set(0) # Make cursor invisible
+            curses.curs_set() # Make cursor invisible
         except:
             pass
         self.win.keypad(1)

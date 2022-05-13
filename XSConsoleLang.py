@@ -82,14 +82,14 @@ class Language:
         elif isinstance(inLabel, Exception):
             exn_strings = []
             for arg in inLabel.args:
-                if isinstance(arg, unicode):
-                    exn_strings.append(arg.encode('utf-8'))
-                else:
-                    exn_strings.append(str(arg))
+                # if isinstance(arg, unicode):
+                #     exn_strings.append(arg.encode('utf-8'))
+                # else:
+                exn_strings.append(str(arg))
             retVal = str(tuple(exn_strings))
             cls.LogError(retVal)
         else:
-            if isinstance(inLabel, unicode):
+            if isinstance(inLabel, str):
                 inLabel = inLabel.encode('utf-8')
             retVal = inLabel
             if cls.stringHook is not None:
@@ -100,7 +100,7 @@ class Language:
     def ReflowText(cls, inText, inWidth):
         # Return an array of string that are at most inWidth characters long
         retArray = []
-        text = inText+" "
+        text = str(inText) + " "
         while len(text) > 0:
             spacePos = text.rfind(' ', 0, inWidth+1) # returns max (lastParam-1), i.e. 'aaaaa'.rfind('a', 0, 3) == 2
             retPos = text.find("\r", 0, inWidth+1)
